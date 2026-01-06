@@ -14,10 +14,7 @@ const STUDY_ID = "nift-mfm-shared";
 
 /***** COUNTDOWN *****/
 const examDate = new Date("2026-02-08T08:00:00");
-const messages = [
-  "🔥 Every second counts",
-];
-
+const messages = ["🔥 Every second counts"];
 const pad = n => n.toString().padStart(2, "0");
 
 setInterval(() => {
@@ -37,10 +34,8 @@ setInterval(() => {
 
   const message = messages[Math.floor(Date.now() / 10000) % messages.length];
 
-  countdown.innerText =
-    `${message}: ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  countdown.innerText = `${message}: ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
 
-  // 🔴 urgency colors
   if (hours < 48) {
     countdown.style.color = "#ff5252";
     countdown.classList.add("pulse");
@@ -127,79 +122,82 @@ const syllabus = {
 const tracker = document.getElementById("tracker");
 let total = 0;
 
-Object.entries(syllabus).forEach(([sec, topics])=>{
+Object.entries(syllabus).forEach(([sec, topics]) => {
   const card = document.createElement("div");
   card.className = "card";
   card.innerHTML = `<h2>${sec}</h2>`;
 
-  topics.forEach(t=>{
+  topics.forEach(t => {
     total++;
-    const id = sec+"-"+t;
+    const id = `${sec}-${t}`;
     card.innerHTML += `
       <label>
-        <input type="checkbox" onchange="saveDone('${id}',this.checked)">
+        <input type="checkbox" data-id="${id}" onchange="saveDone('${id}',this.checked)">
         ${t}
       </label>
-      <textarea placeholder="Notes..."
-        oninput="saveNote('${id}',this.value)"></textarea>
+      <textarea data-id="${id}" placeholder="Notes..." oninput="saveNote('${id}',this.value)"></textarea>
       <br><br>`;
   });
 
   tracker.appendChild(card);
 });
 
-function saveDone(id,val){
-  db.ref(`${STUDY_ID}/done/${id}`).set(val);
-}
-function saveNote(id,val){
-  db.ref(`${STUDY_ID}/notes/${id}`).set(val);
-}
+/***** SAVE FUNCTIONS *****/
+function saveDone(id,val){ db.ref(`${STUDY_ID}/done/${id}`).set(val); }
+function saveNote(id,val){ db.ref(`${STUDY_ID}/notes/${id}`).set(val); }
 
-/***** PROGRESS *****/
-db.ref(`${STUDY_ID}/done`).on("value",snap=>{
-  const done = Object.values(snap.val()||{}).filter(v=>v).length;
-  const pct = Math.round((done/total)*100);
-  progress.style.width = pct+"%";
+/***** SYNC FIREBASE *****/
+// Checkboxes
+db.ref(`${STUDY_ID}/done`).on("value", snapshot => {
+  const doneData = snapshot.val() || {};
+  Object.keys(doneData).forEach(id => {
+    const checkbox = document.querySelector(`input[data-id='${id}']`);
+    if (checkbox) checkbox.checked = doneData[id];
+  });
+
+  const doneCount = Object.values(doneData).filter(v => v).length;
+  const pct = Math.round((doneCount/total)*100);
+  progress.style.width = pct + "%";
   progressText.innerText = `${pct}% completed`;
+});
+
+// Notes
+db.ref(`${STUDY_ID}/notes`).on("value", snapshot => {
+  const notesData = snapshot.val() || {};
+  Object.keys(notesData).forEach(id => {
+    const textarea = document.querySelector(`textarea[data-id='${id}']`);
+    if (textarea) textarea.value = notesData[id];
+  });
 });
 
 /***** MOCKS + CHART *****/
 let mockChart;
-
 function addMock(){
   const name = mockName.value.trim();
   const score = mockScore.value.trim();
-  if(!name||!score) return alert("Enter both fields");
+  if(!name || !score) return alert("Enter both fields");
   db.ref(`${STUDY_ID}/mocks`).push({name,score:Number(score)});
-  mockName.value=""; mockScore.value="";
+  mockName.value = ""; mockScore.value = "";
 }
+function deleteMock(k){ if(confirm("Delete this mock?")) db.ref(`${STUDY_ID}/mocks/${k}`).remove(); }
 
-function deleteMock(k){
-  if(confirm("Delete this mock?"))
-    db.ref(`${STUDY_ID}/mocks/${k}`).remove();
-}
-
-db.ref(`${STUDY_ID}/mocks`).on("value",snap=>{
-  mockList.innerHTML="";
+db.ref(`${STUDY_ID}/mocks`).on("value", snap => {
+  mockList.innerHTML = "";
   const labels=[], scores=[];
-  snap.forEach(c=>{
-    const {name,score}=c.val();
+  snap.forEach(c => {
+    const {name, score} = c.val();
     labels.push(name); scores.push(score);
-    mockList.innerHTML+=`
-      <li>${name} – <b>${score}</b>
-      <button class="delete" onclick="deleteMock('${c.key}')">Delete</button></li>`;
+    mockList.innerHTML += `<li>${name} – <b>${score}</b> <button class='delete' onclick="deleteMock('${c.key}')">Delete</button></li>`;
   });
 
   const ctx = mockChart?.ctx || document.getElementById("mockChart").getContext("2d");
   if(mockChart) mockChart.destroy();
-  mockChart = new Chart(ctx,{
-    type:"line",
-    data:{labels,datasets:[{label:"Mock Trend",data:scores,tension:.3}]},
-    options:{scales:{y:{beginAtZero:true}}}
+  mockChart = new Chart(ctx, {
+    type: "line",
+    data: { labels, datasets:[{label:"Mock Trend", data:scores, tension:0.3}] },
+    options: { scales:{ y:{beginAtZero:true} } }
   });
 });
 
 /***** DARK MODE *****/
-function toggleDark(){
-  document.body.classList.toggle("dark");
-}
+function toggleDark(){ document.body.classList.toggle("dark"); }
