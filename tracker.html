@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+
+
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NIFT MFM Study Tracker</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+
+
+
+
+
+<body>
+
+<h1>NIFT MFM – Study Tracker</h1>
+
+<div class="card" id="countdown"></div>
+
+<div class="card">
+  <h2>Overall Progress</h2>
+  <div class="progress-bar"><div class="progress" id="progress"></div></div>
+  <p id="progressText"></p>
+</div>
+
+<div class="card">
+  <button onclick="toggleDark()">Toggle Dark Mode</button>
+</div>
+
+<div id="tracker"></div>
+
+<div class="card">
+  <h2>Mock Tests</h2>
+  <input id="mockName" placeholder="Mock name" />
+  <input id="mockScore" type="number" placeholder="Score" />
+  <button onclick="addMock()">Add</button>
+
+  <ul id="mockList"></ul>
+  <canvas id="mockChart" height="120"></canvas>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
