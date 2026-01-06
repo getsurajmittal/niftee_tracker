@@ -13,16 +13,25 @@ const db = firebase.database();
 const STUDY_ID = "nift-mfm-shared";
 
 /***** COUNTDOWN *****/
-const examDate = new Date("2026-02-08T08:00:00");
-const messages = ["🔥 Every second counts"];
+const examDate = new Date("2026-02-05T22:00:00+05:30");
 const pad = n => n.toString().padStart(2, "0");
+
+const quotes = [
+//   "⏳ Time left to take your revenge — no excuses!",
+  "🔥 Every second wasted is a second your dream slips away!"
+//   "⚡ Countdown to dominance — push harder now!",
+//   "💪 This is your war — hours left to conquer it!",
+//   "🚀 No mercy. No pause. Only results.",
+//   "⏰ Time is ticking — be relentless!",
+//   "🔥 Outwork, outsmart, outlast — the clock is your enemy!"
+];
 
 setInterval(() => {
   const now = new Date();
   const diff = examDate - now;
 
   if (diff <= 0) {
-    countdown.innerText = "⏳ EXAM TIME!";
+    countdown.innerHTML = "<b>⏳ EXAM TIME!</b>";
     countdown.className = "";
     return;
   }
@@ -32,9 +41,9 @@ setInterval(() => {
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  const message = messages[Math.floor(Date.now() / 10000) % messages.length];
+  const quote = quotes[Math.floor(Date.now() / 5000) % quotes.length];
 
-  countdown.innerText = `${message}: ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+  countdown.innerHTML = `<b>${quote} — ${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s</b>`;
 
   if (hours < 48) {
     countdown.style.color = "#ff5252";

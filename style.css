@@ -5,6 +5,12 @@
     body.dark {
       --bg:#0f172a; --card:#1e293b; --text:#e5e7eb;
     }
+
+    #countdown {
+      font-weight: bold;
+      font-size: 1.0rem; /* optional: bigger size for emphasis */
+    }
+
     body {
       font-family: Arial, sans-serif;
       background:var(--bg);
