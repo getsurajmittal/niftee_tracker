@@ -258,6 +258,90 @@ function deleteImage(id, timestamp) {
     });
 }
 
+/***** IMAGE VIEWER *****/
+let currentZoom = 1;
+let touchStartDistance = 0;
+
+function openImageViewer(imageSrc, imageName) {
+  const modal = document.getElementById("imageViewerModal");
+  const img = document.getElementById("viewerImage");
+  const info = document.getElementById("viewerInfo");
+
+  img.src = imageSrc;
+  info.textContent = imageName || "Image";
+  modal.classList.add("active");
+
+  currentZoom = 1;
+  img.style.transform = "scale(1)";
+
+  // Add touch and wheel listeners
+  img.addEventListener("wheel", handleWheel, false);
+  document.addEventListener("touchmove", handleTouchMove, false);
+  document.addEventListener("touchstart", handleTouchStart, false);
+  document.addEventListener("touchend", handleTouchEnd, false);
+}
+
+function closeImageViewer() {
+  const modal = document.getElementById("imageViewerModal");
+  const img = document.getElementById("viewerImage");
+
+  modal.classList.remove("active");
+
+  // Remove listeners
+  img.removeEventListener("wheel", handleWheel);
+  document.removeEventListener("touchmove", handleTouchMove);
+  document.removeEventListener("touchstart", handleTouchStart);
+  document.removeEventListener("touchend", handleTouchEnd);
+}
+
+function handleWheel(e) {
+  e.preventDefault();
+  const img = document.getElementById("viewerImage");
+  const zoomSpeed = 0.1;
+
+  if (e.deltaY < 0) {
+    currentZoom += zoomSpeed;
+  } else {
+    currentZoom = Math.max(1, currentZoom - zoomSpeed);
+  }
+
+  currentZoom = Math.min(currentZoom, 5);
+  img.style.transform = `scale(${currentZoom})`;
+}
+
+function handleTouchStart(e) {
+  if (e.touches.length === 2) {
+    touchStartDistance = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+  }
+}
+
+function handleTouchMove(e) {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const img = document.getElementById("viewerImage");
+    const currentDistance = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+
+    const zoomSpeed = 0.01;
+    const delta = currentDistance - touchStartDistance;
+    currentZoom += delta * zoomSpeed;
+
+    currentZoom = Math.max(1, Math.min(currentZoom, 5));
+    img.style.transform = `scale(${currentZoom})`;
+
+    touchStartDistance = currentDistance;
+  }
+}
+
+function handleTouchEnd(e) {
+  touchStartDistance = 0;
+}
+
 /***** SYNC FIREBASE *****/
 // Checkboxes
 db.ref(`${STUDY_ID}/done`).on("value", (snapshot) => {
@@ -316,19 +400,9 @@ db.ref(`${STUDY_ID}/images`).on("value", (snapshot) => {
             imgElement.style.cursor = "pointer";
             imgElement.title = "Click to view full size";
 
-            // Click to view full size in new tab
+            // Click to view full size in modal
             imgElement.onclick = function () {
-              const link = document.createElement("a");
-              link.href = img.data;
-              link.download = img.name || "image.jpg";
-              // For viewing in browser instead of download
-              const newWindow = window.open();
-              newWindow.document.write(
-                '<img src="' +
-                  img.data +
-                  '" style="max-width:100%;max-height:100%;padding:10px;"/>'
-              );
-              newWindow.document.close();
+              openImageViewer(img.data, img.name || "Image");
             };
 
             const deleteBtn = document.createElement("button");

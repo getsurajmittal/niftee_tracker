@@ -47,3 +47,64 @@
     .images-container > div { position: relative; display: inline-block; }
     .images-container img { max-width: 150px; max-height: 150px; border-radius: 6px; object-fit: cover; display: block; }
     .images-container img:hover { opacity: 0.8; }
+    
+    /* Image Viewer Modal */
+    .image-viewer-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      touch-action: none;
+    }
+    .image-viewer-modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .image-viewer-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .image-viewer-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .image-viewer-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      border: none;
+      color: #000;
+      font-size: 28px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+      z-index: 10000;
+    }
+    .image-viewer-close:hover {
+      background: rgba(255, 255, 255, 1);
+    }
+    .image-viewer-info {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #000;
+    }
