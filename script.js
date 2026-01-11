@@ -168,27 +168,45 @@ function saveNote(id, val) {
 /***** IMAGE UPLOAD *****/
 function uploadImage(id, fileInput) {
   const file = fileInput.files[0];
-  if (!file) return;
+  if (!file) {
+    console.log("No file selected");
+    return;
+  }
+
+  console.log("File selected:", file.name, "Size:", file.size);
 
   const reader = new FileReader();
   reader.onload = function (e) {
-    let base64String = e.target.result;
+    try {
+      let base64String = e.target.result;
+      console.log("File read successfully");
 
-    // Compress image for mobile if it's too large
-    if (file.size > 1 * 1024 * 1024) {
-      compressImage(base64String, (compressed) => {
-        saveImageToDatabase(id, compressed, file.name, fileInput);
-      });
-    } else {
-      saveImageToDatabase(id, base64String, file.name, fileInput);
+      // Compress image for mobile if it's too large
+      if (file.size > 1 * 1024 * 1024) {
+        console.log("Compressing large image...");
+        compressImage(base64String, (compressed) => {
+          saveImageToDatabase(id, compressed, file.name, fileInput);
+        });
+      } else {
+        saveImageToDatabase(id, base64String, file.name, fileInput);
+      }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      alert("Error: " + error.message);
     }
   };
 
-  reader.onerror = function () {
-    alert("Failed to read file");
+  reader.onerror = function (error) {
+    console.error("FileReader error:", error);
+    alert("Failed to read file: " + error);
   };
 
-  reader.readAsDataURL(file);
+  try {
+    reader.readAsDataURL(file);
+  } catch (error) {
+    console.error("Error reading file:", error);
+    alert("Failed to read file: " + error.message);
+  }
 }
 
 function compressImage(base64String, callback) {
@@ -266,6 +284,7 @@ function openImageViewer(imageSrc, imageName) {
   const modal = document.getElementById("imageViewerModal");
   const img = document.getElementById("viewerImage");
   const info = document.getElementById("viewerInfo");
+  const content = document.querySelector(".image-viewer-content");
 
   img.src = imageSrc;
   info.textContent = imageName || "Image";
@@ -274,11 +293,20 @@ function openImageViewer(imageSrc, imageName) {
   currentZoom = 1;
   img.style.transform = "scale(1)";
 
+  console.log("Opening image viewer for:", imageName);
+
   // Add touch and wheel listeners
   img.addEventListener("wheel", handleWheel, false);
-  document.addEventListener("touchmove", handleTouchMove, false);
-  document.addEventListener("touchstart", handleTouchStart, false);
-  document.addEventListener("touchend", handleTouchEnd, false);
+  modal.addEventListener("touchmove", handleTouchMove, false);
+  modal.addEventListener("touchstart", handleTouchStart, false);
+  modal.addEventListener("touchend", handleTouchEnd, false);
+
+  // Close on modal click (outside image)
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      closeImageViewer();
+    }
+  });
 }
 
 function closeImageViewer() {
@@ -287,11 +315,13 @@ function closeImageViewer() {
 
   modal.classList.remove("active");
 
+  console.log("Closing image viewer");
+
   // Remove listeners
   img.removeEventListener("wheel", handleWheel);
-  document.removeEventListener("touchmove", handleTouchMove);
-  document.removeEventListener("touchstart", handleTouchStart);
-  document.removeEventListener("touchend", handleTouchEnd);
+  modal.removeEventListener("touchmove", handleTouchMove);
+  modal.removeEventListener("touchstart", handleTouchStart);
+  modal.removeEventListener("touchend", handleTouchEnd);
 }
 
 function handleWheel(e) {
@@ -311,6 +341,7 @@ function handleWheel(e) {
 
 function handleTouchStart(e) {
   if (e.touches.length === 2) {
+    e.preventDefault();
     touchStartDistance = Math.hypot(
       e.touches[0].clientX - e.touches[1].clientX,
       e.touches[0].clientY - e.touches[1].clientY
@@ -335,6 +366,8 @@ function handleTouchMove(e) {
     img.style.transform = `scale(${currentZoom})`;
 
     touchStartDistance = currentDistance;
+
+    console.log("Zoom level:", currentZoom.toFixed(2));
   }
 }
 
@@ -398,12 +431,16 @@ db.ref(`${STUDY_ID}/images`).on("value", (snapshot) => {
             imgElement.style.borderRadius = "6px";
             imgElement.style.display = "block";
             imgElement.style.cursor = "pointer";
+            imgElement.style.touchAction = "manipulation";
             imgElement.title = "Click to view full size";
 
-            // Click to view full size in modal
-            imgElement.onclick = function () {
+            // Click to view full size in modal - use addEventListener for better mobile support
+            imgElement.addEventListener("click", function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("Image clicked:", img.name);
               openImageViewer(img.data, img.name || "Image");
-            };
+            });
 
             const deleteBtn = document.createElement("button");
             deleteBtn.className = "delete";
