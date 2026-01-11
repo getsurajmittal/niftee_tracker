@@ -10,6 +10,7 @@ firebase.initializeApp({
 });
 
 const db = firebase.database();
+const storage = firebase.storage();
 const STUDY_ID = "nift-mfm-shared";
 
 /***** COUNTDOWN *****/
@@ -145,6 +146,11 @@ Object.entries(syllabus).forEach(([sec, topics]) => {
         ${t}
       </label>
       <textarea data-id="${id}" placeholder="Notes..." oninput="saveNote('${id}',this.value)"></textarea>
+      <div class="image-upload">
+        <label for="img-${id}">📸 Upload Image</label>
+        <input type="file" id="img-${id}" accept="image/*" data-id="${id}" onchange="uploadImage('${id}',this)" />
+      </div>
+      <div class="images-container" data-id="${id}"></div>
       <br><br>`;
   });
 
@@ -154,6 +160,64 @@ Object.entries(syllabus).forEach(([sec, topics]) => {
 /***** SAVE FUNCTIONS *****/
 function saveDone(id,val){ db.ref(`${STUDY_ID}/done/${id}`).set(val); }
 function saveNote(id,val){ db.ref(`${STUDY_ID}/notes/${id}`).set(val); }
+
+/***** IMAGE UPLOAD *****/
+function uploadImage(id, fileInput) {
+  const file = fileInput.files[0];
+  if (!file) return;
+  
+  // Check file size (limit to 500KB for database storage)
+  if (file.size > 500 * 1024) {
+    alert("File size must be less than 500KB. Please use a smaller image.");
+    return;
+  }
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64String = e.target.result;
+    const timestamp = Date.now();
+    const filename = file.name;
+    
+    console.log("Uploading image:", filename, "Size:", file.size);
+    
+    // Create a new object to store image data
+    const imageObj = {};
+    imageObj[timestamp] = {
+      data: base64String,
+      name: filename
+    };
+    
+    // Push the image to database
+    db.ref(`${STUDY_ID}/images/${id}`).update(imageObj).then(() => {
+      console.log("Image uploaded successfully");
+      alert("Image uploaded successfully!");
+    }).catch(error => {
+      console.error("Upload error:", error);
+      alert("Failed to upload image: " + error.message);
+    });
+    
+    fileInput.value = "";
+  };
+  
+  reader.onerror = function() {
+    alert("Failed to read file");
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+function deleteImage(id, timestamp) {
+  if (!confirm("Delete this image?")) return;
+  
+  console.log("Deleting image with timestamp:", timestamp);
+  
+  db.ref(`${STUDY_ID}/images/${id}/${timestamp}`).remove().then(() => {
+    console.log("Image deleted successfully");
+  }).catch(error => {
+    console.error("Delete error:", error);
+    alert("Failed to delete image: " + error.message);
+  });
+}
 
 /***** SYNC FIREBASE *****/
 // Checkboxes
@@ -176,6 +240,64 @@ db.ref(`${STUDY_ID}/notes`).on("value", snapshot => {
   Object.keys(notesData).forEach(id => {
     const textarea = document.querySelector(`textarea[data-id='${id}']`);
     if (textarea) textarea.value = notesData[id];
+  });
+});
+
+// Images
+db.ref(`${STUDY_ID}/images`).on("value", snapshot => {
+  const imagesData = snapshot.val() || {};
+  console.log("Images data received:", imagesData);
+  
+  Object.keys(imagesData).forEach(id => {
+    const container = document.querySelector(`.images-container[data-id='${id}']`);
+    if (container) {
+      container.innerHTML = "";
+      const imagesObj = imagesData[id];
+      
+      // imagesObj is now an object with timestamps as keys
+      if (typeof imagesObj === 'object' && imagesObj !== null) {
+        Object.keys(imagesObj).forEach(timestamp => {
+          const img = imagesObj[timestamp];
+          
+          if (img && img.data) {
+            const wrapper = document.createElement("div");
+            wrapper.style.position = "relative";
+            wrapper.style.display = "inline-block";
+            wrapper.style.margin = "4px";
+            
+            const imgElement = document.createElement("img");
+            imgElement.src = img.data;
+            imgElement.alt = img.name || "note image";
+            imgElement.style.maxWidth = "150px";
+            imgElement.style.maxHeight = "150px";
+            imgElement.style.borderRadius = "6px";
+            imgElement.style.display = "block";
+            imgElement.style.cursor = "pointer";
+            
+            // Click to view full size
+            imgElement.onclick = function() {
+              const fullWindow = window.open();
+              fullWindow.document.write(`<img src="${img.data}" style="max-width:100%;max-height:100%;"/>`);
+              fullWindow.document.close();
+            };
+            
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "delete";
+            deleteBtn.textContent = "✕";
+            deleteBtn.style.position = "absolute";
+            deleteBtn.style.top = "0";
+            deleteBtn.style.right = "0";
+            deleteBtn.style.padding = "4px 8px";
+            deleteBtn.style.fontSize = "0.8rem";
+            deleteBtn.onclick = () => deleteImage(id, timestamp);
+            
+            wrapper.appendChild(imgElement);
+            wrapper.appendChild(deleteBtn);
+            container.appendChild(wrapper);
+          }
+        });
+      }
+    }
   });
 });
 
